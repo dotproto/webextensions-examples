@@ -1,0 +1,13 @@
+{
+  "name": "Evented Background Logger",
+  "version": "0.1",
+  "manifest_version": 3,
+  "background": {
+    "page": "bg.html",
+    "service_worker": "bg.js"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "action": {}
+}
