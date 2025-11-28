@@ -8,19 +8,33 @@ const TITLE = {
 const APPLICABLE_PROTOCOLS = [ 'http:', 'https:' ];
 
 /**
+ * Chrome and Safari don't support Page Action API, so we have to emulate it
+ * using the Action API.
+ */
+let pageAction;
+if (browser.pageAction) {
+  pageAction = browser.pageAction;
+} else {
+  pageAction = browser.action;
+  pageAction.show = pageAction.enable;
+  pageAction.hide = pageAction.disable;
+}
+
+/**
  * Toggle CSS: based on the current title, insert or remove the CSS.
  * Update the page action's title and icon to reflect its state.
  */
 async function toggleCSS(tab) {
   const tabId = tab.id;
-  const title = await browser.pageAction.getTitle({ tabId });
+  const title = await pageAction.getTitle({ tabId });
+  if (!protocolIsApplicable(tab.url)) return;
 
   if (title === TITLE.on) {
-    updatePageAction(tabId, 'on');
-    browser.scripting.insertCSS({ target: { tabId }, files: ['style.css'] });
-  } else {
     updatePageAction(tabId, 'off');
     browser.scripting.removeCSS({ target: { tabId }, files: ['style.css'] });
+  } else {
+    updatePageAction(tabId, 'on');
+    browser.scripting.insertCSS({ target: { tabId }, files: ['style.css'] });
   }
 }
 
@@ -34,8 +48,8 @@ function updatePageAction(tabId, state = 'off') {
     throw new Error(`Unexpected state value '${state}'. Must be one of: ${Object.keys(TITLE).join(', ')}`);
   }
 
-  browser.pageAction.setIcon({ tabId, path: `icons/${state}.svg` });
-  browser.pageAction.setTitle({ tabId, title: TITLE[state] });
+  pageAction.setIcon({ tabId, path: `icons/${state}-32.png` });
+  pageAction.setTitle({ tabId, title: TITLE[state] });
 }
 
 /**
@@ -43,6 +57,7 @@ function updatePageAction(tabId, state = 'off') {
  * Argument url must be a valid URL string.
  */
 function protocolIsApplicable(url) {
+  if (!url) return false;
   const protocol = new URL(url).protocol;
   return APPLICABLE_PROTOCOLS.includes(protocol);
 }
@@ -52,9 +67,11 @@ function protocolIsApplicable(url) {
  * Only operates on tabs whose URL's protocol is applicable.
  */
 function initializePageAction(tab) {
+  updatePageAction(tab.id, 'off');
   if (protocolIsApplicable(tab.url)) {
-    updatePageAction(tab.id, 'off');
-    browser.pageAction.show(tab.id);
+    pageAction.show(tab.id);
+  } else {
+    pageAction.hide(tab.id);
   }
 }
 
@@ -71,9 +88,13 @@ gettingAllTabs.then((tabs) => {
 /**
  * Each time a tab is updated, reset the page action for that tab.
  */
-browser.tabs.onUpdated.addListener((_id, _changeInfo, tab) => initializePageAction(tab) );
+browser.tabs.onUpdated.addListener((_id, _changeInfo, tab) => {
+  if (_changeInfo.status === 'loading') {
+    initializePageAction(tab);
+  }
+});
 
 /**
  * Toggle CSS when the page action is clicked.
  */
-browser.pageAction.onClicked.addListener(toggleCSS);
+pageAction.onClicked.addListener(toggleCSS);

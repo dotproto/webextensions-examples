@@ -10,10 +10,26 @@
     }
   },
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["background.js"],
+    "service_worker": "background.js",
+    "preferred_environment": ["document", "service_worker"]
   },
   "page_action": {
-    "default_icon": "icons/off.svg"
+    "default_icon": {
+      "16": "icons/off-16.png",
+      "32": "icons/off-32.png",
+      "48": "icons/off-48.png",
+      "64": "icons/off-64.png"
+    }
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/off-16.png",
+      "32": "icons/off-32.png",
+      "48": "icons/off-48.png",
+      "64": "icons/off-64.png"
+    },
+    "default_state": "disabled"
   },
   "permissions": [
     "activeTab",
